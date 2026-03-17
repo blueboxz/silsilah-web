@@ -28,19 +28,30 @@
                 foto_url: document.getElementById('foto_url').value
             };
 
-            try {
+try {
                 btnSubmit.disabled = true;
                 btnSubmit.innerText = "Menyimpan...";
                 statusMsg.innerHTML = "";
 
+                // STABLE FIX: Membersihkan trailing slash (/) otomatis dari URL jika ada
+                const cleanApiUrl = API_URL.replace(/\/$/, "");
+
                 // Mengirim POST request ke Worker API
-                const response = await fetch(API_URL + "/api/anggota", {
+                const response = await fetch(cleanApiUrl + "/api/anggota", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
 
-                const result = await response.json();
+                // CyberSecurity Basic: Baca sebagai teks dulu agar tidak crash jika server membalas 404/500 text html
+                const textResult = await response.text(); 
+                let result;
+
+                try {
+                    result = JSON.parse(textResult); // Baru kita coba ubah ke JSON
+                } catch (parseError) {
+                    throw new Error("Respon server bukan JSON. Status: " + response.status + " | Balasan: " + textResult.substring(0, 50));
+                }
 
                 if (response.ok) {
                     statusMsg.innerHTML = `<p class="text-green-600 bg-green-50 p-3 rounded border border-green-200">Alhamdulillah, data ${payload.nama_lengkap} berhasil disimpan!</p>`;
