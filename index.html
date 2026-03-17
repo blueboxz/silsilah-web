@@ -6,38 +6,35 @@
     <title>Silsilah Keluarga Besar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://d3js.org/d3.v7.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.0.1"></script>
+    <script src="https://cdn.jsdelivr.net/npm/d3-org-chart@3.1.0"></script>
     <style>
-        #chart-container { width: 100%; height: 75vh; background-color: #f8fafc; border-radius: 12px; border: 1px solid #e2e8f0; }
+        #chart-container { width: 100%; height: 80vh; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; }
     </style>
 </head>
-<body class="bg-white text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-50 text-slate-900 font-sans">
 
-    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-sky-700">Pohon Keluarga Besar</h1>
-            <a href="admin" class="bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded text-sm font-medium transition">Admin Panel &rarr;</a>
-        </div>
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <h1 class="text-xl font-bold text-sky-700">Pohon Keluarga Besar</h1>
+        <a href="admin" class="bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition">Admin Panel</a>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8">
-        <div class="text-center mb-6">
-            <h2 class="text-3xl font-light mb-2">Ahlan wa Sahlan</h2>
-            <p id="loading-status" class="text-sky-600 animate-pulse">Menghubungkan ke infrastruktur Cloudflare...</p>
-        </div>
-        <div id="chart-container"></div>
+    <main class="max-w-6xl mx-auto p-4 md:p-8">
+        <div id="status" class="text-center py-20 text-slate-400 animate-pulse">Menghubungkan ke infrastruktur Cloudflare...</div>
+        <div id="chart-container" class="hidden shadow-xl bg-white"></div>
     </main>
 
     <script>
-        const API_URL = "https://silsilah-api.fdewas.workers.dev";
-        const cleanApiUrl = API_URL.replace(/\/$/, "");
+        const API_URL = "https://silsilah-api.fdewas.workers.dev/"; // URL WORKER ANTUM
 
-        async function initFamilyTree() {
-            const statusEl = document.getElementById('loading-status');
+        async function renderTree() {
+            const statusEl = document.getElementById('status');
+            const chartEl = document.getElementById('chart-container');
+
             try {
+                // Fetch data dari D1 via Worker
                 const [resA, resR] = await Promise.all([
-                    fetch(cleanApiUrl + "/api/anggota", { cache: "no-store" }),
-                    fetch(cleanApiUrl + "/api/relasi", { cache: "no-store" })
+                    fetch(API_URL + "/api/anggota", { cache: 'no-store' }),
+                    fetch(API_URL + "/api/relasi", { cache: 'no-store' })
                 ]);
 
                 if (!resA.ok || !resR.ok) throw new Error("Gagal mengambil data dari API.");
@@ -46,44 +43,49 @@
                 const relasi = await resR.json();
 
                 if (anggota.length === 0) {
-                    statusEl.innerHTML = "Data masih kosong. Silakan isi di Admin Panel.";
+                    statusEl.innerHTML = "Database kosong. Silakan isi data di Admin Panel.";
                     return;
                 }
 
+                // Transformasi data untuk D3 Org Chart
                 const treeData = anggota.map(a => {
                     const r = relasi.find(rel => rel.child_id === a.id);
                     return {
                         id: a.id.toString(),
                         parentId: r ? r.parent_id.toString() : "",
                         name: a.nama_lengkap,
-                        bio: a.bio || "",
                         gender: a.gender,
-                        foto: a.foto_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(a.nama_lengkap)}&background=random`
+                        bio: a.bio || "Anggota Keluarga"
                     };
                 });
 
                 statusEl.style.display = 'none';
+                chartEl.classList.remove('hidden');
 
+                // Inisialisasi Chart
                 new d3.OrgChart()
                     .container('#chart-container')
                     .data(treeData)
-                    .nodeWidth(d => 220)
+                    .nodeWidth(d => 200)
                     .nodeHeight(d => 100)
-                    .nodeContent(d => `
-                        <div style="background:white; border-top:4px solid ${d.data.gender==='L'?'#0ea5e9':'#10b981'}; border-radius:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.1); width:100%; height:100%; display:flex; align-items:center; padding:10px;">
-                            <img src="${d.data.foto}" style="width:40px; height:40px; border-radius:50%; margin-right:10px;" />
-                            <div>
-                                <div style="font-size:14px; font-weight:bold;">${d.data.name}</div>
-                                <div style="font-size:11px; color:#64748b;">${d.data.bio}</div>
-                            </div>
+                    .nodeContent(d => {
+                        const color = d.data.gender === 'L' ? '#0284c7' : '#059669';
+                        return `
+                        <div style="background-color:white; border-top:5px solid ${color}; border-radius:8px; box-shadow:0 4px 6px -1px rgb(0 0 0 / 0.1); width:100%; height:100%; display:flex; flex-direction:column; justify-content:center; padding:15px; font-family:sans-serif;">
+                            <div style="font-size:14px; font-weight:bold; color:#1e293b; margin-bottom:4px;">${d.data.name}</div>
+                            <div style="font-size:11px; color:#64748b; line-height:1.2;">${d.data.bio}</div>
                         </div>
-                    `)
+                        `;
+                    })
                     .render();
-            } catch (e) {
-                statusEl.innerHTML = "Error: " + e.message;
+
+            } catch (err) {
+                statusEl.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`;
+                console.error(err);
             }
         }
-        window.onload = initFamilyTree;
+
+        window.onload = renderTree;
     </script>
 </body>
 </html>
