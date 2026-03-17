@@ -23,21 +23,26 @@
         <div id="chart-container" class="hidden shadow-xl bg-white"></div>
     </main>
 
-    <script>
-        const API_URL = "https://silsilah-api.fdewas.workers.dev/"; // URL WORKER ANTUM
+<script>
+        // STABLE IS PRIORITY: Sanitasi URL Otomatis
+        const INPUT_URL = "https://silsilah-api.fdewas.workers.dev"; 
+        // Memastikan tidak ada trailing slash di akhir URL base
+        const API_URL = INPUT_URL.replace(/\/$/, "");
 
         async function renderTree() {
             const statusEl = document.getElementById('status');
             const chartEl = document.getElementById('chart-container');
 
             try {
-                // Fetch data dari D1 via Worker
+                // Memastikan pemanggilan menggunakan path tunggal /api/...
                 const [resA, resR] = await Promise.all([
-                    fetch(API_URL + "/api/anggota", { cache: 'no-store' }),
-                    fetch(API_URL + "/api/relasi", { cache: 'no-store' })
+                    fetch(`${API_URL}/api/anggota`, { cache: 'no-store' }),
+                    fetch(`${API_URL}/api/relasi`, { cache: 'no-store' })
                 ]);
 
-                if (!resA.ok || !resR.ok) throw new Error("Gagal mengambil data dari API.");
+                if (!resA.ok || !resR.ok) {
+                    throw new Error(`Server merespon A:${resA.status} R:${resR.status}. Pastikan endpoint API sudah benar.`);
+                }
 
                 const anggota = await resA.json();
                 const relasi = await resR.json();
@@ -62,7 +67,7 @@
                 statusEl.style.display = 'none';
                 chartEl.classList.remove('hidden');
 
-                // Inisialisasi Chart
+                // Render Chart
                 new d3.OrgChart()
                     .container('#chart-container')
                     .data(treeData)
@@ -80,8 +85,8 @@
                     .render();
 
             } catch (err) {
-                statusEl.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`;
-                console.error(err);
+                statusEl.innerHTML = `<span class="text-red-500 font-bold">Error Visualisasi: ${err.message}</span>`;
+                console.error("Detail Error:", err);
             }
         }
 
