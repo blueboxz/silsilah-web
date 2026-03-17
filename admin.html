@@ -10,15 +10,14 @@
 
     <script>
         // STABLE IS PRIORITY: Endpoint API Utama
-        const API_URL = "URL_WORKER_ANTUM"; // <-- GANTI DENGAN URL WORKER CLOUDFLARE ANTUM
+        const API_URL = "https://silsilah-api.fdewas.workers.dev/"; // <-- GANTI DENGAN URL WORKER CLOUDFLARE ANTUM
 
         async function submitData(event) {
-            event.preventDefault(); // Mencegah reload halaman
+            event.preventDefault();
             
             const btnSubmit = document.getElementById('btn-submit');
             const statusMsg = document.getElementById('status-msg');
             
-            // Mengambil nilai dari form
             const payload = {
                 nama_lengkap: document.getElementById('nama').value,
                 gender: document.getElementById('gender').value,
@@ -28,39 +27,34 @@
                 foto_url: document.getElementById('foto_url').value
             };
 
-try {
+            try {
                 btnSubmit.disabled = true;
-                btnSubmit.innerText = "Menyimpan...";
-                statusMsg.innerHTML = "";
+                btnSubmit.innerText = "Menyimpan ke Database...";
+                statusMsg.innerHTML = `<p class="text-sky-600 bg-sky-50 p-3 rounded border border-sky-200">Mengirim data ke infrastruktur Cloudflare...</p>`;
 
-                // STABLE FIX: Membersihkan trailing slash (/) otomatis dari URL jika ada
+                // Sanitasi URL (mencegah double slash)
                 const cleanApiUrl = API_URL.replace(/\/$/, "");
-
-                // Mengirim POST request ke Worker API
+                
                 const response = await fetch(cleanApiUrl + "/api/anggota", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(payload)
                 });
 
-                // CyberSecurity Basic: Baca sebagai teks dulu agar tidak crash jika server membalas 404/500 text html
+                // Defensive Programming: Selalu baca sebagai teks mentah terlebih dahulu
                 const textResult = await response.text(); 
-                let result;
 
-                try {
-                    result = JSON.parse(textResult); // Baru kita coba ubah ke JSON
-                } catch (parseError) {
-                    throw new Error("Respon server bukan JSON. Status: " + response.status + " | Balasan: " + textResult.substring(0, 50));
+                if (!response.ok) {
+                    // Jika Worker membalas dengan status 4xx atau 5xx, tampilkan teks aslinya
+                    throw new Error(`Server menolak (Status HTTP ${response.status}). Detail: ${textResult}`);
                 }
 
-                if (response.ok) {
-                    statusMsg.innerHTML = `<p class="text-green-600 bg-green-50 p-3 rounded border border-green-200">Alhamdulillah, data ${payload.nama_lengkap} berhasil disimpan!</p>`;
-                    document.getElementById('form-anggota').reset(); // Kosongkan form setelah sukses
-                } else {
-                    throw new Error(result.error || "Gagal menyimpan data");
-                }
+                // Jika sukses (Status 200/201)
+                statusMsg.innerHTML = `<p class="text-green-600 bg-green-50 p-3 rounded border border-green-200">Alhamdulillah, data ${payload.nama_lengkap} berhasil disimpan ke D1 Database!</p>`;
+                document.getElementById('form-anggota').reset();
+
             } catch (error) {
-                statusMsg.innerHTML = `<p class="text-red-600 bg-red-50 p-3 rounded border border-red-200">Error: ${error.message}</p>`;
+                statusMsg.innerHTML = `<p class="text-red-600 bg-red-50 p-3 rounded border border-red-200"><b>Troubleshooting:</b><br>${error.message}</p>`;
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerText = "Simpan Data Anggota";
@@ -115,7 +109,6 @@ try {
                 <div>
                     <label class="block text-sm font-medium text-slate-700 mb-1">URL Foto (Opsional)</label>
                     <input type="url" id="foto_url" placeholder="https://contoh.com/foto.jpg" class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500">
-                    <p class="text-xs text-slate-400 mt-1">Masukkan link gambar dari GDrive/Postimages/dll karena kita menggunakan opsi tanpa billing R2.</p>
                 </div>
 
                 <div>
@@ -131,6 +124,5 @@ try {
             </form>
         </div>
     </main>
-
 </body>
 </html>
