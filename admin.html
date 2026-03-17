@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Silsilah Keluarga</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+    <script>
+        // STABLE IS PRIORITY: Endpoint API Utama
+        const API_URL = "URL_WORKER_ANTUM"; // <-- GANTI DENGAN URL WORKER CLOUDFLARE ANTUM
+
+        async function submitData(event) {
+            event.preventDefault(); // Mencegah reload halaman
+            
+            const btnSubmit = document.getElementById('btn-submit');
+            const statusMsg = document.getElementById('status-msg');
+            
+            // Mengambil nilai dari form
+            const payload = {
+                nama_lengkap: document.getElementById('nama').value,
+                gender: document.getElementById('gender').value,
+                tanggal_lahir: document.getElementById('tanggal_lahir').value,
+                status_hidup: parseInt(document.getElementById('status_hidup').value),
+                bio: document.getElementById('bio').value,
+                foto_url: document.getElementById('foto_url').value
+            };
+
+            try {
+                btnSubmit.disabled = true;
+                btnSubmit.innerText = "Menyimpan...";
+                statusMsg.innerHTML = "";
+
+                // Mengirim POST request ke Worker API
+                const response = await fetch(API_URL + "/api/anggota", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusMsg.innerHTML = `<p class="text-green-600 bg-green-50 p-3 rounded border border-green-200">Alhamdulillah, data ${payload.nama_lengkap} berhasil disimpan!</p>`;
+                    document.getElementById('form-anggota').reset(); // Kosongkan form setelah sukses
+                } else {
+                    throw new Error(result.error || "Gagal menyimpan data");
+                }
+            } catch (error) {
+                statusMsg.innerHTML = `<p class="text-red-600 bg-red-50 p-3 rounded border border-red-200">Error: ${error.message}</p>`;
+            } finally {
+                btnSubmit.disabled = false;
+                btnSubmit.innerText = "Simpan Data Anggota";
+            }
+        }
+    </script>
+
+    <header class="bg-white shadow-sm border-b border-slate-200">
+        <div class="max-w-3xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-sky-700">Admin Panel Silsilah</h1>
+            <a href="index.html" class="text-sm font-medium text-slate-500 hover:text-sky-600 transition">&larr; Kembali ke Beranda</a>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-3xl mx-auto px-4 py-8 w-full">
+        <div class="bg-white rounded-xl shadow-sm border border-slate-100 p-6 md:p-8">
+            <h2 class="text-2xl font-light text-slate-800 mb-6 border-b pb-4">Tambah Anggota Keluarga</h2>
+            
+            <div id="status-msg" class="mb-4"></div>
+
+            <form id="form-anggota" onsubmit="submitData(event)" class="space-y-5">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nama Lengkap *</label>
+                        <input type="text" id="nama" required class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Jenis Kelamin *</label>
+                        <select id="gender" required class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500 bg-white">
+                            <option value="">Pilih...</option>
+                            <option value="L">Laki-laki</option>
+                            <option value="P">Perempuan</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Tanggal Lahir</label>
+                        <input type="date" id="tanggal_lahir" class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Status Kehidupan</label>
+                        <select id="status_hidup" class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500 bg-white">
+                            <option value="1">Masih Hidup</option>
+                            <option value="0">Telah Wafat (Rahimahullah)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">URL Foto (Opsional)</label>
+                    <input type="url" id="foto_url" placeholder="https://contoh.com/foto.jpg" class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500">
+                    <p class="text-xs text-slate-400 mt-1">Masukkan link gambar dari GDrive/Postimages/dll karena kita menggunakan opsi tanpa billing R2.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Biodata / Cerita Singkat</label>
+                    <textarea id="bio" rows="3" class="w-full border border-slate-300 rounded p-2 focus:ring-sky-500 focus:border-sky-500"></textarea>
+                </div>
+
+                <div class="pt-4">
+                    <button type="submit" id="btn-submit" class="w-full bg-sky-600 hover:bg-sky-700 text-white font-medium py-2.5 px-4 rounded transition">
+                        Simpan Data Anggota
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+</body>
+</html>
